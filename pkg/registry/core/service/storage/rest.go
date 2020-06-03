@@ -163,7 +163,7 @@ func (rs *REST) Create(ctx context.Context, obj runtime.Object, createValidation
 	defer func() {
 		if releaseServiceIP {
 			if helper.IsServiceIPSet(service) {
-				rs.serviceIPs.Release(net.ParseIP(service.Spec.ClusterIP))
+				//rs.serviceIPs.Release(net.ParseIP(service.Spec.ClusterIP))
 			}
 		}
 	}()
@@ -250,7 +250,7 @@ func (rs *REST) Delete(ctx context.Context, id string, options *metav1.DeleteOpt
 
 func (rs *REST) releaseAllocatedResources(svc *api.Service) {
 	if helper.IsServiceIPSet(svc) {
-		rs.serviceIPs.Release(net.ParseIP(svc.Spec.ClusterIP))
+		//rs.serviceIPs.Release(net.ParseIP(svc.Spec.ClusterIP))
 	}
 
 	for _, nodePort := range collectServiceNodePorts(svc) {
@@ -361,7 +361,7 @@ func (rs *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObj
 	defer func() {
 		if releaseServiceIP {
 			if helper.IsServiceIPSet(service) {
-				rs.serviceIPs.Release(net.ParseIP(service.Spec.ClusterIP))
+				//rs.serviceIPs.Release(net.ParseIP(service.Spec.ClusterIP))
 			}
 		}
 	}()
@@ -379,7 +379,7 @@ func (rs *REST) Update(ctx context.Context, name string, objInfo rest.UpdatedObj
 		// Update service from non-ExternalName to ExternalName, should release ClusterIP if exists.
 		if oldService.Spec.Type != api.ServiceTypeExternalName && service.Spec.Type == api.ServiceTypeExternalName {
 			if helper.IsServiceIPSet(oldService) {
-				rs.serviceIPs.Release(net.ParseIP(oldService.Spec.ClusterIP))
+				//rs.serviceIPs.Release(net.ParseIP(oldService.Spec.ClusterIP))
 			}
 		}
 	}
@@ -588,6 +588,7 @@ func allocateHealthCheckNodePort(service *api.Service, nodePortOp *portallocator
 func initClusterIP(service *api.Service, serviceIPs ipallocator.Interface) (bool, error) {
 	switch {
 	case service.Spec.ClusterIP == "":
+		return false, nil
 		// Allocate next available.
 		ip, err := serviceIPs.AllocateNext()
 		if err != nil {
@@ -599,6 +600,8 @@ func initClusterIP(service *api.Service, serviceIPs ipallocator.Interface) (bool
 		service.Spec.ClusterIP = ip.String()
 		return true, nil
 	case service.Spec.ClusterIP != api.ClusterIPNone && service.Spec.ClusterIP != "":
+		service.Spec.ClusterIP = ""
+		return false, nil
 		// Try to respect the requested IP.
 		if err := serviceIPs.Allocate(net.ParseIP(service.Spec.ClusterIP)); err != nil {
 			// TODO: when validation becomes versioned, this gets more complicated.
